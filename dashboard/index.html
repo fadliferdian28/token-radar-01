@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Radar: pre-token protocols ranked by implied value</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<a class="skip" href="#board">Skip to the board</a>
+<header class="head">
+  <div class="head-top">
+    <h1>Token Radar</h1>
+    <p class="tag">Every pre-token protocol in the snapshot, ranked by what its token would be worth if it launched today.</p>
+  </div>
+  <dl class="stats" id="stats" aria-label="Board headline figures"></dl>
+  <p class="asof" id="asof"></p>
+</header>
+
+<section class="panel" id="how" aria-labelledby="how-h">
+  <h2 id="how-h">How this radar works</h2>
+  <p>Each row's implied value follows from the snapshot's own figures, never from a hand-picked list of names:</p>
+  <p class="formula">implied value = TVL &times; category multiple &times; growth &times; maturity &times; breadth</p>
+  <ul class="method">
+    <li><strong>Category multiple.</strong> The median market-cap-to-TVL ratio of the category's live-token protocols, shrunk toward the global median for thin categories. A category needs at least two live comparables to earn its own multiple; fewer, and the global median applies. No multiple exceeds 1.0&times; TVL: a launch is not valued above the value the protocol already holds.</li>
+    <li><strong>Growth.</strong> The 7-day TVL change, clamped to &minus;90%..+400% and square-root dampened, so a noisy week moves a row by at most half.</li>
+    <li><strong>Maturity.</strong> 0.60 for a brand-new protocol, rising to 1.00 over three years. A protocol with no listing date is scored as one year old.</li>
+    <li><strong>Breadth.</strong> A capped log factor for the number of chains: nothing for one chain, at most +15%.</li>
+  </ul>
+  <p class="check-line" id="cal-check"></p>
+  <p class="check-line" id="recompute-check"></p>
+  <p class="limits"><strong>Limits, stated plainly.</strong> An implied value is a model estimate, not a price and not a promise: a token may never launch, and if it does, the market sets the price. A protocol "records no token" in this snapshot; that is what the record says, not proof that no token exists. The farm plans are a starting point, not financial advice.</p>
+</section>
+
+<section class="panel" id="calibration" aria-labelledby="cal-h">
+  <h2 id="cal-h">Calibration: what live tokens actually trade at</h2>
+  <p>Each category's multiple comes from its live-token comparables in this same snapshot. Categories with fewer than two comparables fall back to the global median.</p>
+  <div class="table-wrap">
+    <table id="cal-table">
+      <thead><tr><th>Category</th><th>Live comparables</th><th>Median mcap / TVL</th><th>Multiple applied</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<main id="board" tabindex="-1">
+  <div class="tabs" role="tablist" aria-label="Board views">
+    <button id="tab-pre" role="tab" aria-selected="true">Pre-token board</button>
+    <button id="tab-live" role="tab" aria-selected="false">Live tokens</button>
+  </div>
+
+  <form class="controls" id="controls" aria-label="Board filters">
+    <label>Search <input type="search" id="q" placeholder="Name or slug" autocomplete="off"></label>
+    <label>Category <select id="f-cat"><option value="">All categories</option></select></label>
+    <label>Chain <select id="f-chain"><option value="">All chains</option></select></label>
+    <label>TVL at least <select id="f-tvl">
+      <option value="0">Any TVL</option>
+      <option value="10000000">$10M</option>
+      <option value="50000000">$50M</option>
+      <option value="100000000">$100M</option>
+      <option value="500000000">$500M</option>
+      <option value="1000000000">$1B</option>
+    </select></label>
+    <label>7-day change <select id="f-growth">
+      <option value="">Any</option>
+      <option value="up">Growing</option>
+      <option value="down">Falling</option>
+    </select></label>
+    <p class="count" id="count" aria-live="polite"></p>
+  </form>
+
+  <div class="table-wrap">
+    <table id="board-table">
+      <thead><tr>
+        <th data-sort="rank">Rank</th>
+        <th data-sort="name">Protocol</th>
+        <th data-sort="tvl_usd">TVL</th>
+        <th data-sort="change_7d">7d</th>
+        <th data-sort="age_days">Age</th>
+        <th data-sort="chains">Chains</th>
+        <th data-sort="implied_value_usd">Implied value</th>
+        <th data-sort="category_multiple">Multiple</th>
+        <th>Check</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-wrap" hidden id="live-wrap">
+    <p class="live-note">These protocols already have a token that trades, so the board shows the market's own value for them, never a model's. They are the comparables the calibration is built from.</p>
+    <table id="live-table">
+      <thead><tr>
+        <th data-sort="name">Protocol</th>
+        <th data-sort="tvl_usd">TVL</th>
+        <th data-sort="mcap_usd">Market cap</th>
+        <th data-sort="ratio">Mcap / TVL</th>
+        <th data-sort="change_7d">7d</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+
+<dialog id="detail" aria-labelledby="detail-title">
+  <form method="dialog" class="dialog-head">
+    <h2 id="detail-title"></h2>
+    <button class="close" aria-label="Close detail view">Close</button>
+  </form>
+  <div id="detail-body"></div>
+</dialog>
+
+<footer>
+  <p>Token Radar, model radar-2. Snapshot: DefiLlama protocols, frozen at the date shown above. The page recomputes every row's implied value from the snapshot's figures and checks it against the board; a row whose check fails is shown, not hidden. No data leaves this page: the whole dataset ships with it.</p>
+</footer>
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
