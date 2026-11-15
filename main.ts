@@ -1,111 +1,243 @@
-// Token Radar (radar-2): the sealed snapshot in, the ranked board and the dashboard out.
-//
-//   node main.ts [--input snapshot.json]
-//
-// The input defaults to the sealed path /input/snapshot.json; the output directory comes from
-// MAKEFUN_OUTPUT_DIR and defaults to /output. The program writes:
-//
-//   board.json    the ranked board: every watchlist slug plus every rankable pre-token protocol
-//                 below the floor, each with its implied value and its farm plan
-//   data.js       the dashboard's dataset (window.RADAR): the board, the live set, the calibration
-//                 and the model constants, so the page recomputes every row in place
-//   dashboard/    the page itself, copied from the repo's dashboard/
-//   screenshots/  the three renders, copied from the repo's screenshots/
-//   dossier.json  byte-for-byte what the vendored buildDossier writes from dashboard/ + screenshots/
-//
-// The run is deterministic: the same snapshot always writes the same bytes (no clock, no random
-// numbers, every sort fully tie-broken). The board gate runs before anything is written: a board
-// that misses a watchlist slug, misranks a row or carries a bad farm step refuses the run.
+#!/usr/bin/env node
+/**
+ * token-radar-01 v2 — entrypoint.
+ *
+ * Reads the sealed snapshot, fits the size-curve model, ranks the board,
+ * runs the six-check backtest, prices the farm economics at four capitals,
+ * and writes the board, the dashboard's data, and the dossier.
+ *
+ * Usage: node main.ts --input <snapshot.json>
+ *   MAKEFUN_OUTPUT_DIR (default ./out) is where the outputs go.
+ *   The harness runs it twice; both runs must write identical bytes.
+ *   Standard library only, no network.
+ */
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { runBacktest } from "./lib/backtest.ts";
+import {
+  allCapitals,
+  bestPerHour,
+  CAPITALS,
+  farmSteps,
+  verdictCounts,
+} from "./lib/economics.ts";
+import {
+  comparables,
+  fitModel,
+  hasToken,
+  isRankable,
+  rankBoard,
+  type Snapshot,
+} from "./lib/model.ts";
+import { buildDossier } from "./vendor/makefun-board.ts";
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { boardIssue, buildRadar, dataScript, parseSnapshot } from './lib/model.ts';
-import { buildDossier } from './vendor/makefun-board.ts';
+const HERE = dirname(fileURLToPath(import.meta.url));
 
-/** How many bytes of dashboard source the dossier's text may hold. */
-const TEXT_MAX_BYTES = 65536;
-
-/** Where the sealed snapshot lives when no --input is given. */
-const DEFAULT_INPUT = '/input/snapshot.json';
-
-/** Where the output goes when MAKEFUN_OUTPUT_DIR is not set. */
-const DEFAULT_OUTPUT = '/output';
-
-/** The --input value, or the sealed default. */
-function inputPath(argv: string[]): string {
-  const at = argv.indexOf('--input');
-  if (at >= 0 && at + 1 < argv.length) return argv[at + 1] as string;
-  return DEFAULT_INPUT;
+function parseArgs(argv: string[]): { input: string; outDir: string } {
+  let input = "/input/snapshot.json";
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--input" && i + 1 < argv.length) input = argv[i + 1];
+  }
+  const outDir = process.env.MAKEFUN_OUTPUT_DIR || join(HERE, "out");
+  return { input, outDir };
 }
 
-/** The output directory: MAKEFUN_OUTPUT_DIR, or the default. */
-function outputDir(): string {
-  const env = process.env.MAKEFUN_OUTPUT_DIR;
-  return env !== undefined && env.length > 0 ? env : DEFAULT_OUTPUT;
-}
-
-/** This script's own directory: dashboard/ and screenshots/ sit beside it. */
-function scriptDir(): string {
-  return dirname(fileURLToPath(import.meta.url));
-}
-
-/** Copy a directory tree, file by file, creating the destination as needed. */
-function copyTree(from: string, to: string): void {
-  mkdirSync(to, { recursive: true });
-  for (const entry of readdirSync(from)) {
-    const src = join(from, entry);
-    const dst = join(to, entry);
-    if (statSync(src).isDirectory()) copyTree(src, dst);
-    else copyFileSync(src, dst);
+function copyDir(src: string, dest: string): void {
+  mkdirSync(dest, { recursive: true });
+  for (const entry of readdirSync(src, { withFileTypes: true })) {
+    if (entry.isFile()) {
+      copyFileSync(join(src, entry.name), join(dest, entry.name));
+    }
   }
 }
 
 function main(): void {
-  const input = inputPath(process.argv.slice(2));
-  const out = resolve(outputDir());
-  const here = scriptDir();
+  const { input, outDir } = parseArgs(process.argv.slice(2));
+  const snapshot = JSON.parse(
+    readFileSync(input, "utf-8"),
+  ) as Snapshot;
 
-  if (!existsSync(input)) {
-    console.error(`snapshot not found: ${input}`);
-    process.exit(1);
+  const model = fitModel(snapshot);
+  const rows = rankBoard(snapshot, model);
+  const backtest = runBacktest(snapshot);
+  const { list: comps } = comparables(snapshot.protocols);
+
+  // Traded protocols (kept apart) and set-aside protocols (with reasons).
+  const traded = snapshot.protocols
+    .filter(hasToken)
+    .map((p) => ({
+      slug: p.slug,
+      name: p.name,
+      category: p.category ?? "Uncategorized",
+      chains: p.chains,
+      tvl: p.tvl_usd,
+      mcap: p.mcap_usd,
+      change7d: p.change_7d,
+    }))
+    .sort((a, b) => (b.mcap ?? 0) - (a.mcap ?? 0));
+  const setAside = snapshot.protocols
+    .filter((p) => !hasToken(p) && !isRankable(p))
+    .map((p) => ({
+      slug: p.slug,
+      name: p.name,
+      category: p.category ?? "Uncategorized",
+      tvl: p.tvl_usd,
+      reason: setAsideReason(p),
+    }))
+    .sort((a, b) => b.tvl - a.tvl);
+
+  // Board rows with farm economics at every capital.
+  const boardRows = rows.map((r, i) => {
+    const econ = allCapitals(r);
+    return {
+      slug: r.slug,
+      name: r.name,
+      rank: i + 1,
+      implied_value_usd: Math.round(r.value),
+      farm_steps: farmSteps(r, 1000),
+      category: r.category,
+      chains: r.chains,
+      tvl_usd: r.tvl,
+      change_7d: r.change7d,
+      age_days: r.ageDays,
+      watchlist: r.watchlist,
+      value_usd: Math.round(r.value),
+      p10_usd: Math.round(r.p10),
+      p90_usd: Math.round(r.p90),
+      base_value_usd: Math.round(r.baseValue),
+      family_offset: r.familyOffset,
+      growth_factor: r.growthFactor,
+      seasoning_factor: r.seasoningFactor,
+      sibling_factor: r.siblingFactor,
+      launch_probability: r.launchProb,
+      economics: econ.map((e) => ({
+        capital: e.capital,
+        slice: e.slice,
+        expected_usd: e.expected,
+        fees_usd: e.fees,
+        opportunity_usd: e.opportunity,
+        exit_cost_usd: e.exitCost,
+        net_usd: e.net,
+        verdict: e.verdict,
+        net_per_hour: e.netPerHour,
+      })),
+    };
+  });
+
+  // Family offset table (for the calibration panel).
+  const offsets = [...model.offsets.entries()]
+    .map(([category, o]) => ({ category, offset: o.offset, n: o.n }))
+    .sort((a, b) => b.n - a.n || a.category.localeCompare(b.category));
+
+  // Verdict counts + best-per-hour at each capital.
+  const verdicts: Record<number, { FARM: number; THIN: number; SKIP: number }> = {};
+  const best: Record<number, { slug: string; name: string; netPerHour: number; net: number } | null> = {};
+  const bestWatch: Record<number, { slug: string; name: string; netPerHour: number; net: number } | null> = {};
+  const watchRows = rows.filter((r) => r.watchlist);
+  for (const c of CAPITALS) {
+    verdicts[c] = verdictCounts(rows, c);
+    best[c] = bestPerHour(rows, c);
+    bestWatch[c] = bestPerHour(watchRows, c);
   }
 
-  const snapshot = parseSnapshot(readFileSync(input, 'utf8'));
-  const { board, radar } = buildRadar(snapshot);
-  const issue = boardIssue(board, snapshot);
-  if (issue !== null) {
-    console.error(`board refused: ${issue}`);
-    process.exit(1);
-  }
+  const data = {
+    asOf: snapshot.as_of,
+    source: snapshot.source,
+    floorUsd: snapshot.floor_usd,
+    counts: {
+      ranked: rows.length,
+      trading: traded.length,
+      setAside: setAside.length,
+      total: snapshot.protocols.length,
+      watchlist: snapshot.watchlist.length,
+    },
+    fit: {
+      intercept: model.fit.intercept,
+      slope: model.fit.slope,
+      rmse: model.fit.rmse,
+      n: model.fit.n,
+      excludedZeroMcap: model.excludedZeroMcap,
+      winsorized: model.winsorized,
+    },
+    medianAgeDays: model.medianAgeDays,
+    offsets,
+    backtest,
+    verdicts,
+    best,
+    bestWatch,
+    comparables: comps.map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      category: c.category,
+      tvl: c.tvl,
+      mcap: c.mcap,
+    })),
+    rows: boardRows,
+    traded,
+    setAside,
+  };
 
-  mkdirSync(out, { recursive: true });
-  writeFileSync(join(out, 'board.json'), `${JSON.stringify(board, null, 2)}\n`);
-  writeFileSync(join(out, 'data.js'), dataScript(radar));
+  mkdirSync(outDir, { recursive: true });
+  mkdirSync(join(outDir, "dashboard"), { recursive: true });
+  mkdirSync(join(outDir, "screenshots"), { recursive: true });
 
-  const dashboardSrc = join(here, 'dashboard');
-  const screenshotsSrc = join(here, 'screenshots');
-  if (!existsSync(dashboardSrc)) {
-    console.error('dashboard/ is missing: the page is what the judge reads');
-    process.exit(1);
-  }
-  const shotCount = existsSync(screenshotsSrc)
-    ? readdirSync(screenshotsSrc).filter((f) => !f.startsWith('.')).length
-    : 0;
-  if (shotCount < 3) {
-    console.error(`screenshots/ holds ${shotCount} images: the dossier needs at least 3`);
-    process.exit(1);
-  }
-  copyTree(dashboardSrc, join(out, 'dashboard'));
-  copyTree(screenshotsSrc, join(out, 'screenshots'));
-
-  writeFileSync(join(out, 'dossier.json'), buildDossier(out, { text_max_bytes: TEXT_MAX_BYTES }));
-
-  const dossierBytes = statSync(join(out, 'dossier.json')).size;
-  console.log(
-    `radar-2: ${board.length} rows (${radar.watchlist_size} watchlist, ${radar.early_size} early), ` +
-      `${radar.live_size} live, dossier ${dossierBytes} bytes`,
+  // board.json: the gate reads rows (slug/name/rank/implied_value_usd/farm_steps).
+  writeFileSync(
+    join(outDir, "board.json"),
+    JSON.stringify({ rows: boardRows }, null, 1) + "\n",
   );
+  // data.js: the dashboard's data, beside the page (outside dashboard/).
+  writeFileSync(
+    join(outDir, "data.js"),
+    "window.RADAR_DATA = " + JSON.stringify(data) + ";\n",
+  );
+  // Dashboard + screenshots, copied verbatim.
+  copyDir(join(HERE, "dashboard"), join(outDir, "dashboard"));
+  copyDir(join(HERE, "screenshots"), join(outDir, "screenshots"));
+  // Dossier, built by the scorer's own library.
+  const dossier = buildDossier(outDir, { text_max_bytes: 65536 });
+  writeFileSync(join(outDir, "dossier.json"), dossier);
+}
+
+function setAsideReason(p: {
+  name: string;
+  category: string | null;
+}): string {
+  const excluded = new Set([
+    "Bridge",
+    "Canonical Bridge",
+    "Liquid Staking",
+    "Liquid Restaking",
+    "Restaked BTC",
+    "CEX",
+    "Centralized Exchange",
+  ]);
+  if (p.category !== null && excluded.has(p.category)) {
+    return `Excluded category: ${p.category}`;
+  }
+  if (/\s(V\d+(\.\d+)?|v\d+(\.\d+)?|\d+\.\d+)$/.test(p.name || "")) {
+    return "Versioned name (a later version of a protocol)";
+  }
+  if (/\b(wrapped|staked|staking)\b/i.test(p.name || "")) {
+    return "Wrapped or staked product of another protocol";
+  }
+  const exchanges = [
+    "Binance",
+    "Coinbase",
+    "Bybit",
+    "Kraken",
+    "Bitget",
+    "OKX",
+    "Bitfinex",
+    "Gemini",
+  ];
+  for (const ex of exchanges) {
+    if ((p.name || "").startsWith(ex)) {
+      return `Exchange product (${ex})`;
+    }
+  }
+  return "Set aside by the house rule";
 }
 
 main();
