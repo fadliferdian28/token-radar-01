@@ -3,16 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Token Launch Radar v3 — pre-token protocols, priced by odds</title>
-<link rel="stylesheet" href="style.css">
+<meta name="description" content="Token Launch Radar — 198 pre-token DeFi protocols ranked by implied launch value (value if it launches × launch odds), each with a costed 12-week farm plan and a nested out-of-sample validation.">
+<title>Token Launch Radar v4 — pre-token protocols, priced by odds</title>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
-<header class="top">
+<header class="masthead">
   <div>
     <h1>Token Launch Radar</h1>
     <p class="sub" id="snap-line">Loading snapshot…</p>
   </div>
-  <p class="tag">Implied value = value if it launches × launch odds.<br>Every number below is computed from the snapshot at build time.</p>
+  <p class="tag">Implied value = value if it launches &times; launch odds.<br>Every number on this page is computed from the snapshot at build time — nothing is typed in by hand.</p>
 </header>
 
 <section class="kpis" id="kpis" aria-label="Headline numbers"></section>
@@ -56,7 +57,7 @@
 <table id="board">
   <thead><tr>
     <th>#</th><th>Protocol</th><th>TVL</th><th>Value if launches</th>
-    <th>Launch odds</th><th>Implied value</th><th>Net @ deposit</th><th>$/hour</th><th>Verdict</th>
+    <th>Launch odds</th><th>Implied value</th><th>Rank range</th><th>Net @ deposit</th><th>$/hour</th><th>Verdict</th>
   </tr></thead>
   <tbody></tbody>
 </table>
@@ -68,10 +69,13 @@
   <p class="dim" id="oos-intro"></p>
   <div class="oos-grid">
     <div><h3>Headline checks</h3><div id="oos-head"></div></div>
+    <div><h3>Odds calibration (cross-fitted)</h3><div id="oos-calib"></div></div>
     <div><h3>Walk-forward, per origin</h3><div id="oos-wf"></div></div>
     <div><h3>Ablation — what each term adds</h3><div id="oos-abl"></div></div>
     <div><h3>Shrinkage tuning (leave-one-out)</h3><div id="oos-tune"></div></div>
+    <div><h3>Leave-one-category-out</h3><div id="oos-loco"></div></div>
   </div>
+  <div class="calib-wide"><h3>Calibration curve — predicted odds against observed launch rate</h3><div id="calib-curve"></div></div>
   <div class="scatter"><h3>The fit, seen</h3><div id="scatter"></div></div>
 </section>
 
@@ -90,6 +94,6 @@
 </details>
 
 <script src="../data.js"></script>
-<script src="app.js"></script>
+<script src="board.js"></script>
 </body>
 </html>

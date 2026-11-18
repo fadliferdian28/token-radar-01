@@ -1,0 +1,124 @@
+/* Token Launch Radar v4 — dashboard theme. Light, dense, readable. */
+:root {
+  --ink: #1c2333;
+  --dim: #5b6478;
+  --line: #d9dee8;
+  --paper: #ffffff;
+  --wash: #f3f5f9;
+  --navy: #16213a;
+  --accent: #1d6fb8;
+  --good: #1a7f4b;
+  --warn: #a06a00;
+  --bad: #b3261e;
+  --good-bg: #e3f4ea;
+  --warn-bg: #fdf3d7;
+  --bad-bg: #fdecea;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--wash);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1 { font-size: 30px; margin: 0; letter-spacing: -0.5px; }
+h2 { font-size: 21px; margin: 0 0 8px; }
+h3 { font-size: 15px; margin: 0 0 6px; }
+p { margin: 0 0 10px; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.dim { color: var(--dim); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+/* ---- Masthead + KPI strip ---- */
+.masthead {
+  display: flex; flex-wrap: wrap; gap: 12px 32px; justify-content: space-between;
+  align-items: flex-start; padding: 22px 28px;
+  background: var(--navy); color: #eef2f8;
+}
+.masthead .sub { margin: 4px 0 0; color: #aeb9cc; }
+.masthead .tag { margin: 0; text-align: right; color: #c6d2e2; font-size: 14px; }
+.kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px; padding: 14px 28px 4px;
+}
+.kpi { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.kpi b { display: block; font-size: 24px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.kpi span { color: var(--dim); font-size: 13px; }
+
+/* ---- Verdict tabs + controls ---- */
+.verdicts { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 28px 0; }
+.verdicts button {
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+  border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer;
+}
+.verdicts button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+.controls {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 12px 28px;
+}
+.controls input, .controls select, .controls button {
+  font: inherit; padding: 6px 9px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--paper); color: var(--ink);
+}
+.controls input[type="search"] { min-width: 220px; }
+.controls button { cursor: pointer; }
+.controls .count { margin-left: auto; color: var(--dim); font-size: 13px; }
+
+/* ---- Tables ---- */
+.tablewrap { overflow-x: auto; padding: 0 28px; }
+table { border-collapse: collapse; width: 100%; background: var(--paper); font-size: 14px; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--wash); font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--dim); white-space: nowrap; }
+#board tbody tr { cursor: pointer; }
+#board tbody tr:hover { background: #eef4fb; }
+#board td:nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
+td .sub { display: block; color: var(--dim); font-size: 12px; }
+.pill {
+  display: inline-block; padding: 1px 9px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+}
+.pill.FARM { background: var(--good-bg); color: var(--good); }
+.pill.MARGINAL { background: var(--warn-bg); color: var(--warn); }
+.pill.SKIP { background: var(--bad-bg); color: var(--bad); }
+.check { padding: 10px 28px; font-size: 13px; color: var(--dim); }
+.check.bad { color: var(--bad); font-weight: 700; }
+
+/* ---- Detail panel ---- */
+.detail { margin: 14px 28px 0; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; }
+.detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.detail-head button { border: 1px solid var(--line); background: var(--wash); border-radius: 6px; padding: 5px 12px; cursor: pointer; font: inherit; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 10px; }
+.detail table { font-size: 13px; }
+.detail td:last-child, .detail th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.detail ol { margin: 6px 0 0; padding-left: 20px; }
+.detail ol li { margin-bottom: 8px; font-size: 14px; }
+.detail .flag { color: var(--warn); font-weight: 600; }
+
+/* ---- OOS + method ---- */
+.oos, .method { margin: 22px 28px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+.oos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 20px; }
+.oos-grid table, .calib-wide table { font-size: 13px; }
+.oos-grid td:last-child, .oos-grid th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.calib-wide { margin-top: 20px; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 13px; }
+.bar-row .lbl { width: 150px; flex: none; color: var(--dim); }
+.bar-track { flex: 1; background: var(--wash); border-radius: 4px; height: 14px; position: relative; }
+.bar-fill { background: var(--accent); height: 14px; border-radius: 4px; }
+.bar-mark { position: absolute; top: -2px; width: 2px; height: 18px; background: var(--bad); }
+.bar-row .val { width: 120px; flex: none; text-align: right; font-variant-numeric: tabular-nums; }
+.scatter { margin-top: 20px; }
+.scatter svg { width: 100%; height: auto; max-height: 340px; background: var(--wash); border-radius: 8px; }
+.method p { max-width: 900px; }
+.side { margin: 0 28px 22px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px 20px; }
+.side summary { cursor: pointer; font-weight: 600; }
+.side .tablewrap { padding: 10px 0 4px; }
+@media (max-width: 720px) {
+  .masthead, .kpis, .verdicts, .controls, .tablewrap, .check { padding-left: 12px; padding-right: 12px; }
+  .detail, .oos, .method, .side { margin-left: 12px; margin-right: 12px; }
+  .masthead .tag { text-align: left; }
+}
