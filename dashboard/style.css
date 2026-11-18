@@ -1,0 +1,72 @@
+/* Token Launch Radar v3 — dark dashboard, no network, no framework. */
+:root {
+  --bg: #0c1220; --panel: #141d31; --panel2: #1a2540; --line: #2a3857;
+  --ink: #e8eef7; --dim: #93a3bd; --amber: #f0b23e; --mint: #3ecf8e;
+  --teal: #38b6c9; --red: #e86a6a; --yellow: #e8d44d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+  padding: 16px 20px 40px;
+}
+h1 { font-size: 26px; margin: 0; letter-spacing: -0.5px; }
+h2 { font-size: 19px; margin: 0 0 8px; }
+h3 { font-size: 14px; margin: 0 0 6px; color: var(--amber); }
+.sub, .dim { color: var(--dim); margin: 2px 0; }
+.top { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 14px; }
+.tag { color: var(--dim); margin: 4px 0; text-align: right; font-size: 13px; }
+.kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.kpi b { display: block; font-size: 21px; color: var(--amber); }
+.kpi span { color: var(--dim); font-size: 12px; line-height: 1.35; display: block; }
+.detail { background: var(--panel2); border: 1px solid var(--amber); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+.detail-head { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+.detail-head h2 { margin: 0; }
+.detail h3 { margin-top: 10px; }
+.detail th, .detail td { padding: 5px 9px; }
+.detail ol { margin: 6px 0; padding-left: 22px; }
+.detail li { margin-bottom: 4px; }
+.detail li b { color: var(--mint); }
+.verdicts { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.vtab, #reset, #detail-close {
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 20px; padding: 6px 14px; cursor: pointer; font: inherit; font-size: 13px;
+}
+.vtab.on { background: var(--amber); color: #1a1200; border-color: var(--amber); font-weight: 700; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.controls input, .controls select {
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px;
+}
+.controls label { color: var(--dim); font-size: 13px; }
+.count { color: var(--dim); font-size: 13px; margin-left: auto; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+table { font-size: 13px; }
+th, td { padding: 7px 9px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 600; white-space: nowrap; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#board tbody tr { cursor: pointer; }
+#board tbody tr:hover { background: var(--panel2); }
+#board tbody tr.sel { background: #2a2410; }
+.badge { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+.badge.watch { background: var(--amber); color: #1a1200; }
+.badge.early { background: var(--panel2); color: var(--dim); border: 1px solid var(--line); }
+.v { font-weight: 700; font-size: 12px; border-radius: 4px; padding: 2px 7px; }
+.v.FARM { background: #123d2b; color: var(--mint); }
+.v.MARGINAL { background: #3d3612; color: var(--yellow); }
+.v.SKIP { background: #3d1717; color: var(--red); }
+.pos { color: var(--mint); } .neg { color: var(--red); }
+.range { color: var(--dim); font-size: 11px; }
+.check { color: var(--dim); font-size: 12px; }
+.check.bad { color: var(--red); }
+.oos, .method { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-top: 18px; }
+.oos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.oos-grid table { font-size: 12px; }
+.scatter { margin-top: 14px; }
+.method p { margin: 8px 0; }
+.method code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.side { margin-top: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; }
+.side summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, 1fr); } .oos-grid { grid-template-columns: 1fr; } }

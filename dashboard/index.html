@@ -2,84 +2,92 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Token Launch Radar — pre-token protocols, priced and farmable</title>
-<link rel="stylesheet" href="app.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Launch Radar v3 — pre-token protocols, priced by odds</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="head">
+<header class="top">
   <div>
     <h1>Token Launch Radar</h1>
-    <p class="sub" id="snapshot-line">Loading snapshot…</p>
+    <p class="sub" id="snap-line">Loading snapshot…</p>
   </div>
-  <div class="counts" id="counts"></div>
+  <p class="tag">Implied value = value if it launches × launch odds.<br>Every number below is computed from the snapshot at build time.</p>
 </header>
 
-<section class="panels">
-  <div class="panel" id="panel-headline"><h2>Headline</h2><div class="body"></div></div>
-  <div class="panel" id="panel-pricing"><h2>How a launch is priced</h2><div class="body"></div></div>
-  <div class="panel" id="panel-scatter"><h2>The fit, seen</h2><div class="body"></div></div>
+<section class="kpis" id="kpis" aria-label="Headline numbers"></section>
+
+<section id="detail-panel" class="detail" hidden>
+  <div class="detail-head"><h2 id="detail-title"></h2><button id="detail-close" type="button">Close ✕</button></div>
+  <div id="detail-body"></div>
 </section>
 
-<nav class="tabs" role="tablist">
-  <button class="tab active" data-tab="board" role="tab">Pre-token board</button>
-  <button class="tab" data-tab="traded" role="tab">Trading tokens</button>
-  <button class="tab" data-tab="setaside" role="tab">Set aside</button>
-  <button class="tab" data-tab="method" role="tab">Method &amp; backtest</button>
-</nav>
+<nav class="verdicts" id="verdict-tabs" aria-label="Verdict filter"></nav>
 
-<section id="tab-board" class="tabpage active">
-  <div class="filters">
-    <input id="f-search" type="search" placeholder="Search name or slug…" aria-label="Search">
-    <select id="f-tier" aria-label="Tier"><option value="">All tiers</option><option value="watch">Watchlist</option><option value="early">Early</option></select>
-    <select id="f-family" aria-label="Family"><option value="">All families</option></select>
-    <select id="f-chain" aria-label="Chain"><option value="">All chains</option></select>
-    <select id="f-verdict" aria-label="Verdict"><option value="">All verdicts</option><option value="FARM">FARM</option><option value="THIN">THIN</option><option value="SKIP">SKIP</option></select>
-    <label>Min TVL <input id="f-tvl" type="number" min="0" step="1000000" placeholder="0"></label>
-    <label>Capital <select id="f-capital" aria-label="Capital"><option value="100">$100</option><option value="500">$500</option><option value="1000" selected>$1,000</option><option value="5000">$5,000</option></select></label>
-    <button id="f-reset" type="button">Reset</button>
-    <span class="rowcount" id="rowcount"></span>
+<section class="controls">
+  <input id="q" type="search" placeholder="Search name or slug…" aria-label="Search">
+  <select id="cat" aria-label="Category"><option value="">All categories</option></select>
+  <select id="chain" aria-label="Chain"><option value="">All chains</option></select>
+  <select id="sort" aria-label="Sort">
+    <option value="rank">Sort: rank</option>
+    <option value="implied_value_usd">Sort: implied value</option>
+    <option value="value_if_launches_usd">Sort: value if launches</option>
+    <option value="tvl_usd">Sort: TVL</option>
+    <option value="launch_odds">Sort: launch odds</option>
+    <option value="net">Sort: net</option>
+    <option value="perhour">Sort: $/hour</option>
+  </select>
+  <label>Deposit <select id="deposit" aria-label="Deposit">
+    <option value="100">$100</option>
+    <option value="1000" selected>$1,000</option>
+    <option value="5000">$5,000</option>
+    <option value="10000">$10,000</option>
+  </select></label>
+  <label>Drop share <select id="share" aria-label="Drop share">
+    <option value="0.035">3.5%</option>
+    <option value="0.07" selected>7%</option>
+    <option value="0.14">14%</option>
+  </select></label>
+  <button id="reset" type="button">Reset</button>
+  <span class="count" id="row-count"></span>
+</section>
+
+<section class="tablewrap">
+<table id="board">
+  <thead><tr>
+    <th>#</th><th>Protocol</th><th>TVL</th><th>Value if launches</th>
+    <th>Launch odds</th><th>Implied value</th><th>Net @ deposit</th><th>$/hour</th><th>Verdict</th>
+  </tr></thead>
+  <tbody></tbody>
+</table>
+</section>
+<p class="check" id="recompute"></p>
+
+<section id="oos" class="oos">
+  <h2>Out-of-sample validation — the model tested against itself</h2>
+  <p class="dim" id="oos-intro"></p>
+  <div class="oos-grid">
+    <div><h3>Headline checks</h3><div id="oos-head"></div></div>
+    <div><h3>Walk-forward, per origin</h3><div id="oos-wf"></div></div>
+    <div><h3>Ablation — what each term adds</h3><div id="oos-abl"></div></div>
+    <div><h3>Shrinkage tuning (leave-one-out)</h3><div id="oos-tune"></div></div>
   </div>
-  <div class="tablewrap">
-  <table id="board-table">
-    <thead><tr>
-      <th data-sort="rank">#</th><th data-sort="name">Protocol</th>
-      <th data-sort="tvl_usd">TVL</th><th data-sort="change_7d">7d</th>
-      <th data-sort="age_days">No token for</th><th data-sort="value_usd">Implied value</th>
-      <th data-sort="slice">Your $1k slice</th><th data-sort="net_usd">Net · verdict</th>
-      <th>Farm summary</th>
-    </tr></thead>
-    <tbody></tbody>
-  </table>
-  </div>
-  <p class="check" id="recompute-check"></p>
+  <div class="scatter"><h3>The fit, seen</h3><div id="scatter"></div></div>
 </section>
 
-<section id="tab-traded" class="tabpage">
-  <p class="note">These protocols already record a token. Their market caps are the market's own values, kept apart from the ranked board — they are the comparables the size curve is fitted on, never launches.</p>
-  <div class="tablewrap">
-  <table id="traded-table">
-    <thead><tr><th>Protocol</th><th>Category</th><th>TVL</th><th>Market cap</th><th>MCap / TVL</th></tr></thead>
-    <tbody></tbody>
-  </table>
-  </div>
+<section class="method" id="method">
+  <h2>Method, in one page</h2>
+  <div id="method-body"></div>
 </section>
 
-<section id="tab-setaside" class="tabpage">
-  <p class="note">Set aside by the house rule, each with its reason. A wrapped, staked or bridged product of a token that already trades is not a token that does not exist yet.</p>
-  <div class="tablewrap">
-  <table id="setaside-table">
-    <thead><tr><th>Protocol</th><th>Category</th><th>TVL</th><th>Reason</th></tr></thead>
-    <tbody></tbody>
-  </table>
-  </div>
-</section>
-
-<section id="tab-method" class="tabpage">
-  <div class="method" id="method-body"></div>
-</section>
-
-<dialog id="detail"><div class="detail-body"></div><button class="close" type="button">Close</button></dialog>
+<details class="side">
+  <summary id="traded-sum"></summary>
+  <div class="tablewrap"><table id="traded"><thead><tr><th>Protocol</th><th>Category</th><th>TVL</th><th>Market cap</th><th>MCap / TVL</th></tr></thead><tbody></tbody></table></div>
+</details>
+<details class="side">
+  <summary id="aside-sum"></summary>
+  <div class="tablewrap"><table id="aside"><thead><tr><th>Protocol</th><th>Category</th><th>TVL</th><th>Reason set aside</th></tr></thead><tbody></tbody></table></div>
+</details>
 
 <script src="../data.js"></script>
 <script src="app.js"></script>
